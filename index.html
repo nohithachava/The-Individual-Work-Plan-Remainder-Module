@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="The Individual Work Plan Reminder Module - Organize your tasks and never miss a deadline." />
+  <meta name="keywords" content="task manager, reminder, work plan, productivity, schedule" />
+  <meta name="author" content="Individual Work Plan Reminder Module" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <title>The Individual Work Plan Reminder Module</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Cabinet+Grotesk:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ─── TOAST STACK ─── -->
+  <div id="toastContainer" class="toast-container" aria-live="assertive"></div>
+
+  <!-- ─── NOTIFICATION PANEL ─── -->
+  <div id="notifOverlay" class="notif-overlay" onclick="closeNotifPanel()" hidden></div>
+  <div id="notifPanel" class="notif-panel" hidden>
+    <div class="notif-panel-header">
+      <span>🔔 Notification Center</span>
+      <div class="notif-header-actions">
+        <button onclick="markAllRead()" class="notif-action-btn">Mark all read</button>
+        <button onclick="clearAllNotifs()" class="notif-action-btn danger">Clear all</button>
+        <button onclick="closeNotifPanel()" class="notif-close-btn">✕</button>
+      </div>
+    </div>
+    <div id="notifList" class="notif-list">
+      <div class="notif-empty">No notifications yet.</div>
+    </div>
+  </div>
+
+  <!-- ─── EDIT TASK MODAL ─── -->
+  <div id="editModal" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h3>✎ Edit Task</h3>
+        <button class="modal-close" onclick="closeEditModal()">✕</button>
+      </div>
+      <form id="editForm" novalidate>
+        <input type="hidden" id="editTaskId" />
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Task Name *</label>
+            <input type="text" id="editName" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Priority</label>
+            <select id="editPriority" class="form-input">
+              <option value="high">🔴 High</option>
+              <option value="medium">🟡 Medium</option>
+              <option value="low">🟢 Low</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Date *</label>
+            <input type="date" id="editDate" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Time *</label>
+            <input type="time" id="editTime" class="form-input" required />
+          </div>
+        </div>
+        <div class="form-group full-width" style="margin-bottom:1rem">
+          <label class="form-label">🔔 Remind me before</label>
+          <div class="remind-chips" id="editRemindChips">
+            <label class="chip"><input type="checkbox" value="2"> 2 min</label>
+            <label class="chip"><input type="checkbox" value="5"> 5 min</label>
+            <label class="chip"><input type="checkbox" value="10"> 10 min</label>
+            <label class="chip"><input type="checkbox" value="15"> 15 min</label>
+            <label class="chip"><input type="checkbox" value="20"> 20 min</label>
+          </div>
+        </div>
+        <div class="form-group full-width" style="margin-bottom:1rem">
+          <label class="form-label">Description</label>
+          <textarea id="editDesc" class="form-input form-textarea" rows="3"></textarea>
+        </div>
+        <div class="form-group full-width" style="margin-bottom:1rem">
+          <label class="form-label">Category</label>
+          <input type="text" id="editCategory" class="form-input" list="catList2" />
+          <datalist id="catList2">
+            <option value="Study"></option><option value="Work"></option>
+            <option value="Personal"></option><option value="Exercise"></option><option value="Project"></option>
+          </datalist>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ─────────────── LOGIN PAGE ─────────────── -->
+  <section id="loginPage" class="page active" aria-label="Login Page">
+    <div class="login-bg">
+      <div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div>
+      <canvas id="gridCanvas"></canvas>
+    </div>
+    <div class="login-wrapper">
+      <div class="login-left">
+        <div class="brand-mark">
+          <span class="brand-icon">◈</span>
+          <span class="brand-name">The Individual Work Plan Reminder Module</span>
+        </div>
+        <h1 class="login-headline">Master<br/><em>your</em> time.<br/>Own<br/><em>your</em> day.</h1>
+        <p class="login-sub">A structured work plan reminder module built for focused individuals.</p>
+        <div class="login-stats">
+          <div class="stat"><span class="stat-num" data-count="100">0</span><span class="stat-label">Tasks Tracked</span></div>
+          <div class="stat-divider"></div>
+          <div class="stat"><span class="stat-num" data-count="24">0</span><span class="stat-label">Hour Coverage</span></div>
+          <div class="stat-divider"></div>
+          <div class="stat"><span class="stat-num" data-count="99">0</span><span class="stat-label">% Uptime</span></div>
+        </div>
+      </div>
+      <div class="login-right">
+
+        <!-- AUTH TAB SWITCHER -->
+        <div class="auth-tabs-outer">
+          <button class="auth-tab-btn active" id="tabLoginBtn" onclick="switchAuthMode('login')">Sign In</button>
+          <button class="auth-tab-btn" id="tabRegisterBtn" onclick="switchAuthMode('register')">Register</button>
+          <div class="auth-tab-slider" id="authTabSlider"></div>
+        </div>
+
+        <!-- LOGIN CARD -->
+        <div class="login-card" role="main" id="loginCard">
+          <div class="card-header"><h2>Sign In</h2><p>Access your work plan</p></div>
+          <form id="loginForm" novalidate>
+            <div class="input-group">
+              <label for="loginUser" class="input-label">Username</label>
+              <div class="input-wrap">
+                <span class="input-icon">◎</span>
+                <input type="text" id="loginUser" placeholder="Enter username" autocomplete="username" required />
+              </div>
+              <span class="field-error" id="userError" role="alert"></span>
+            </div>
+            <div class="input-group">
+              <label for="loginPass" class="input-label">Password</label>
+              <div class="input-wrap">
+                <span class="input-icon">⬡</span>
+                <input type="password" id="loginPass" placeholder="Enter password" autocomplete="current-password" required />
+                <button type="button" class="toggle-pass" onclick="togglePassword()">◉</button>
+              </div>
+              <span class="field-error" id="passError" role="alert"></span>
+            </div>
+            <div class="form-options">
+              <label class="check-label" for="rememberMe">
+                <input type="checkbox" id="rememberMe" /><span class="check-custom"></span>Remember me
+              </label>
+              <a href="#" class="forgot-link" onclick="showForgotHint(event)">Forgot password?</a>
+            </div>
+            <button type="submit" class="btn-login">
+              <span class="btn-text">Enter WorkPlan</span><span class="btn-arrow">→</span>
+            </button>
+            <p class="login-footer-text">New here? <a href="#" onclick="switchAuthMode('register')">Create account</a></p>
+          </form>
+          <div class="login-divider"><span>or continue with</span></div>
+          <div class="social-row">
+            <button class="social-btn" onclick="socialLogin('Google')">G</button>
+            <button class="social-btn" onclick="socialLogin('GitHub')">⌥</button>
+            <button class="social-btn" onclick="socialLogin('Microsoft')">⊞</button>
+          </div>
+        </div>
+
+        <!-- REGISTER CARD -->
+        <div class="login-card" role="main" id="registerCard" hidden>
+          <div class="card-header"><h2>Create Account</h2><p>Join our community</p></div>
+          <form id="registerForm" novalidate>
+            <div class="input-group">
+              <label for="regFullName" class="input-label">Full Name</label>
+              <div class="input-wrap">
+                <span class="input-icon">👤</span>
+                <input type="text" id="regFullName" placeholder="Enter your name" required />
+              </div>
+              <span class="field-error" id="nameError" role="alert"></span>
+            </div>
+            <div class="input-group">
+              <label for="regEmail" class="input-label">Email</label>
+              <div class="input-wrap">
+                <span class="input-icon">✉</span>
+                <input type="email" id="regEmail" placeholder="Enter email address" autocomplete="email" required />
+              </div>
+              <span class="field-error" id="emailError" role="alert"></span>
+            </div>
+            <div class="input-group">
+              <label for="regUsername" class="input-label">Username</label>
+              <div class="input-wrap">
+                <span class="input-icon">◎</span>
+                <input type="text" id="regUsername" placeholder="Choose username" required />
+              </div>
+              <span class="field-error" id="regUserError" role="alert"></span>
+            </div>
+            <div class="input-group">
+              <label for="regPass" class="input-label">Password</label>
+              <div class="input-wrap">
+                <span class="input-icon">⬡</span>
+                <input type="password" id="regPass" placeholder="Create password (min 6 chars)" autocomplete="new-password" required oninput="checkPwStrength()" />
+                <button type="button" class="toggle-pass" onclick="toggleRegPassword()">◉</button>
+              </div>
+              <div class="pw-strength-wrap"><div class="pw-strength-bar" id="pwStrengthBar"></div></div>
+              <p class="pw-strength-label" id="pwStrengthLabel"></p>
+              <span class="field-error" id="regPassError" role="alert"></span>
+            </div>
+            <div class="input-group">
+              <label for="regPassConfirm" class="input-label">Confirm Password</label>
+              <div class="input-wrap">
+                <span class="input-icon">⬡</span>
+                <input type="password" id="regPassConfirm" placeholder="Confirm password" autocomplete="new-password" required />
+              </div>
+              <span class="field-error" id="regPassConfirmError" role="alert"></span>
+            </div>
+            <label class="check-label" style="margin-bottom:1.5rem">
+              <input type="checkbox" id="agreeTerms" required /><span class="check-custom"></span>I agree to Terms & Conditions
+            </label>
+            <button type="submit" class="btn-login">
+              <span class="btn-text">Create Account</span><span class="btn-arrow">→</span>
+            </button>
+            <p class="login-footer-text">Already have an account? <a href="#" onclick="switchAuthMode('login')">Sign in</a></p>
+          </form>
+        </div>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="dashboardPage" class="page" aria-label="Dashboard" hidden>
+
+    <nav class="sidebar" id="sidebar" role="navigation">
+      <div class="sidebar-logo"><span class="brand-icon">◈</span><span>Work Plan Reminder</span></div>
+      <ul class="sidebar-nav" role="list">
+        <li><button class="nav-btn active" data-tab="overview"   onclick="switchTab(this,'overview')"   aria-current="page"><span class="nav-icon">⬡</span> Overview</button></li>
+        <li><button class="nav-btn"         data-tab="tasks"     onclick="switchTab(this,'tasks')"                        ><span class="nav-icon">◎</span> My Tasks</button></li>
+        <li><button class="nav-btn"         data-tab="add"       onclick="switchTab(this,'add')"                          ><span class="nav-icon">✦</span> Add Task</button></li>
+        <li><button class="nav-btn"         data-tab="calendar"  onclick="switchTab(this,'calendar')"                     ><span class="nav-icon">📅</span> Calendar</button></li>
+        <li><button class="nav-btn"         data-tab="analytics" onclick="switchTab(this,'analytics')"                    ><span class="nav-icon">📊</span> Analytics</button></li>
+        <li><button class="nav-btn"         data-tab="completed" onclick="switchTab(this,'completed')"                    ><span class="nav-icon">◉</span> Completed</button></li>
+        <li><button class="nav-btn"         data-tab="settings"  onclick="switchTab(this,'settings')"                     ><span class="nav-icon">⚙</span> Settings</button></li>
+      </ul>
+      <div class="sidebar-footer">
+        <div class="user-chip" id="sidebarUser">
+          <span class="user-avatar" id="userAvatar">U</span>
+          <span id="userNameDisplay">User</span>
+        </div>
+        <button class="logout-btn" onclick="logout()">⏻ Logout</button>
+      </div>
+    </nav>
+
+    <main class="main-content" role="main">
+      <header class="topbar" role="banner">
+        <div class="topbar-left">
+          <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+          <div class="topbar-title" id="tabTitle">Overview</div>
+        </div>
+        <div class="topbar-right">
+          <div class="clock" id="liveClock"></div>
+          <button class="notif-bell-btn" id="notifBellBtn" onclick="openNotifPanel()">
+            🔔<span class="notif-badge" id="notifBadge">0</span>
+          </button>
+          <button class="btn-primary topbar-add-btn" onclick="switchTab(null,'add')">+ Task</button>
+        </div>
+      </header>
+
+      <!-- OVERVIEW -->
+      <div class="tab-panel active" id="tab-overview" role="tabpanel">
+        <div class="welcome-row">
+          <div>
+            <h2 class="welcome-title">Good <span id="timeGreeting">day</span>, <span id="welcomeName">User</span> 👋</h2>
+            <p class="welcome-sub" id="dateDisplay"></p>
+          </div>
+          <button class="btn-primary" onclick="switchTab(null,'add')">+ New Task</button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card" style="--card-accent:#a78bfa"><div class="stat-card-label">Total Tasks</div><div class="stat-card-num" id="statTotal">0</div><div class="stat-card-icon">◈</div></div>
+          <div class="stat-card" style="--card-accent:#34d399"><div class="stat-card-label">Completed</div><div class="stat-card-num" id="statDone">0</div><div class="stat-card-icon">✓</div></div>
+          <div class="stat-card" style="--card-accent:#f59e0b"><div class="stat-card-label">Pending</div><div class="stat-card-num" id="statPending">0</div><div class="stat-card-icon">◎</div></div>
+          <div class="stat-card" style="--card-accent:#f87171"><div class="stat-card-label">Overdue</div><div class="stat-card-num" id="statOverdue">0</div><div class="stat-card-icon">⚠</div></div>
+        </div>
+        <div class="progress-section">
+          <div class="progress-header"><span>Today's Completion Progress</span><span id="progressPercent">0%</span></div>
+          <div class="progress-bar-wrap" id="progressBarWrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+        </div>
+        <div class="upcoming-section">
+          <h3 class="section-title">Upcoming Reminders</h3>
+          <div id="upcomingList" class="upcoming-list"></div>
+        </div>
+      </div>
+
+      <!-- MY TASKS -->
+      <div class="tab-panel" id="tab-tasks" role="tabpanel" hidden>
+        <div class="tasks-toolbar">
+          <input type="search" id="searchInput" class="search-bar" placeholder="🔍  Search tasks..." oninput="renderTasks()" />
+          <select id="filterPriority" class="filter-select" onchange="renderTasks()">
+            <option value="">All Priorities</option>
+            <option value="high">🔴 High</option>
+            <option value="medium">🟡 Medium</option>
+            <option value="low">🟢 Low</option>
+          </select>
+          <select id="filterCategory" class="filter-select" onchange="renderTasks()"><option value="">All Categories</option></select>
+          <select id="sortTasks" class="filter-select" onchange="renderTasks()">
+            <option value="date">Sort by Date</option>
+            <option value="priority">Sort by Priority</option>
+            <option value="name">Sort by Name</option>
+          </select>
+        </div>
+        <div id="taskList" class="task-list" role="list"></div>
+      </div>
+
+      <!-- ADD TASK -->
+      <div class="tab-panel" id="tab-add" role="tabpanel" hidden>
+        <div class="form-wrapper">
+          <div class="form-card">
+            <h3 class="form-title">✦ Create New Task</h3>
+            <form id="taskForm" novalidate>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="taskName" class="form-label">Task Name *</label>
+                  <input type="text" id="taskName" class="form-input" placeholder="e.g. Submit assignment" required />
+                  <span class="field-error" id="nameErr" role="alert"></span>
+                </div>
+                <div class="form-group">
+                  <label for="taskPriority" class="form-label">Priority</label>
+                  <select id="taskPriority" class="form-input">
+                    <option value="high">🔴 High</option>
+                    <option value="medium" selected>🟡 Medium</option>
+                    <option value="low">🟢 Low</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="taskDate" class="form-label">Date *</label>
+                  <input type="date" id="taskDate" class="form-input" required />
+                  <span class="field-error" id="dateErr" role="alert"></span>
+                </div>
+                <div class="form-group">
+                  <label for="taskTime" class="form-label">Time *</label>
+                  <input type="time" id="taskTime" class="form-input" required />
+                  <span class="field-error" id="timeErr" role="alert"></span>
+                </div>
+              </div>
+              <div class="form-group full-width">
+                <label class="form-label">🔔 Remind me before task</label>
+                <div class="remind-chips" id="remindChips">
+                  <label class="chip"><input type="checkbox" name="remind" value="2"> 2 min</label>
+                  <label class="chip"><input type="checkbox" name="remind" value="5" checked> 5 min</label>
+                  <label class="chip"><input type="checkbox" name="remind" value="10"> 10 min</label>
+                  <label class="chip"><input type="checkbox" name="remind" value="15"> 15 min</label>
+                  <label class="chip"><input type="checkbox" name="remind" value="20"> 20 min</label>
+                </div>
+                <p class="form-hint">You'll also get notified when task is created and when it becomes overdue.</p>
+              </div>
+              <div class="form-group full-width">
+                <label for="taskDesc" class="form-label">Description</label>
+                <textarea id="taskDesc" class="form-input form-textarea" placeholder="Add details about this task..." rows="3"></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label for="taskCategory" class="form-label">Category</label>
+                <input type="text" id="taskCategory" class="form-input" placeholder="e.g. Study, Work, Personal" list="categoryList" />
+                <datalist id="categoryList">
+                  <option value="Study"></option><option value="Work"></option>
+                  <option value="Personal"></option><option value="Exercise"></option><option value="Project"></option>
+                </datalist>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="btn-secondary" onclick="resetForm()">Clear</button>
+                <button type="submit" class="btn-primary">✦ Add Task</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- CALENDAR -->
+      <div class="tab-panel" id="tab-calendar" role="tabpanel" hidden>
+        <div class="calendar-wrapper">
+          <div class="calendar-nav">
+            <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+            <h3 class="cal-title" id="calTitle"></h3>
+            <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+          </div>
+          <div class="cal-weekdays">
+            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+          <div class="cal-day-tasks" id="calDayTasks"><p class="form-hint">Click a day to see its tasks.</p></div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS -->
+      <div class="tab-panel" id="tab-analytics" role="tabpanel" hidden>
+        <h3 class="section-title" style="margin-bottom:1.5rem">📊 Task Analytics</h3>
+        <div class="analytics-grid">
+          <div class="analytics-card">
+            <h4 class="analytics-label">Tasks by Priority</h4>
+            <div class="bar-chart" id="priorityChart"></div>
+          </div>
+          <div class="analytics-card">
+            <h4 class="analytics-label">Tasks by Category</h4>
+            <div class="bar-chart" id="categoryChart"></div>
+          </div>
+          <div class="analytics-card wide">
+            <h4 class="analytics-label">Overall Completion Rate</h4>
+            <div class="donut-wrap">
+              <svg class="donut-svg" id="donutSvg" viewBox="0 0 120 120"></svg>
+              <div class="donut-center-label" id="donutLabel">0%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPLETED -->
+      <div class="tab-panel" id="tab-completed" role="tabpanel" hidden>
+        <div class="completed-header">
+          <h3 class="section-title">Completed Tasks</h3>
+          <button class="btn-danger" onclick="clearCompleted()">Clear All</button>
+        </div>
+        <div id="completedList" class="task-list" role="list"></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="tab-panel" id="tab-settings" role="tabpanel" hidden>
+        <div class="form-wrapper">
+          <div class="form-card">
+            <h3 class="form-title">⚙ Settings</h3>
+
+            <div class="settings-section">
+              <h4 class="settings-label">Default Reminder Intervals</h4>
+              <p class="form-hint">These intervals will be pre-selected for new tasks.</p>
+              <div class="remind-chips" id="defaultRemindChips">
+                <label class="chip"><input type="checkbox" value="2">  2 min</label>
+                <label class="chip"><input type="checkbox" value="5" checked>  5 min</label>
+                <label class="chip"><input type="checkbox" value="10"> 10 min</label>
+                <label class="chip"><input type="checkbox" value="15"> 15 min</label>
+                <label class="chip"><input type="checkbox" value="20"> 20 min</label>
+              </div>
+              <button class="btn-secondary" style="margin-top:.75rem" onclick="saveDefaultIntervals()">Save Defaults</button>
+            </div>
+
+            <div class="settings-section">
+              <h4 class="settings-label">Browser Notifications</h4>
+              <label class="toggle-label">
+                <input type="checkbox" id="browserNotifToggle" checked onchange="saveSetting('browserNotif', this.checked)" />
+                <span class="toggle-switch"></span> Enable browser push notifications
+              </label>
+              <button class="btn-secondary" style="margin-top:.75rem" onclick="requestNotificationPermission()">Request Permission</button>
+              <p class="form-hint" id="notifPermStatus" style="margin-top:.5rem"></p>
+            </div>
+
+            <div class="settings-section">
+              <h4 class="settings-label">Accent Color</h4>
+              <div class="color-swatches" id="colorSwatches">
+                <button class="swatch active" style="background:#a78bfa" onclick="setAccent('#a78bfa',this)" title="Purple"></button>
+                <button class="swatch" style="background:#34d399" onclick="setAccent('#34d399',this)" title="Green"></button>
+                <button class="swatch" style="background:#f59e0b" onclick="setAccent('#f59e0b',this)" title="Amber"></button>
+                <button class="swatch" style="background:#f87171" onclick="setAccent('#f87171',this)" title="Red"></button>
+                <button class="swatch" style="background:#38bdf8" onclick="setAccent('#38bdf8',this)" title="Sky"></button>
+                <button class="swatch" style="background:#fb923c" onclick="setAccent('#fb923c',this)" title="Orange"></button>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h4 class="settings-label">Data Management</h4>
+              <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+                <button class="btn-secondary" onclick="exportTasks()">⬇ Export Tasks (JSON)</button>
+                <button class="btn-danger" onclick="confirmClearAll()">🗑 Clear All Tasks</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
